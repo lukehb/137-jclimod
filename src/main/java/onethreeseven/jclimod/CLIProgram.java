@@ -3,11 +3,15 @@ package onethreeseven.jclimod;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.MissingCommandException;
 import com.beust.jcommander.ParameterException;
+
+import java.io.*;
 import java.util.List;
 import java.util.Scanner;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -17,6 +21,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class CLIProgram {
 
     protected final JCommander jc = new JCommander();
+    private final ThreadFactory threadFactory = r -> new Thread(r, "Poll for CLI input thread.");
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor(threadFactory);
+    private final AtomicBoolean keepReadingInput = new AtomicBoolean(true);
+    private Future readingInputTask;
 
     public CLIProgram(Object... modelDataForCommands){
         jc.setAllowParameterOverwriting(true);
@@ -92,34 +100,60 @@ public class CLIProgram {
     }
 
     public void startListeningForInput(){
-        ExecutorService exec = Executors.newSingleThreadExecutor();
-        final AtomicBoolean keepReadingInput = new AtomicBoolean(true);
-        final Scanner scanner = new Scanner(System.in);
 
-        exec.execute(()->{
-            while(keepReadingInput.get()){
-                while(scanner.hasNextLine()){
-                    String inputStr = scanner.nextLine();
-                    String[] args = inputStr.split(" ");
-                    try {
-                        boolean success = this.doCommand(args);
-                        if (!success) {
-                            System.err.println("Command failed.");
+
+
+        readingInputTask = executorService.submit(()->{
+
+            final BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+            try{
+
+                while(keepReadingInput.get()){
+                    //ready() is very important here, because buffer is only ready if it has input in it
+                    //otherwise if ready() were removed we go to readline() which just blocks for input
+                    //which will cause this thread to block while holding System.in (a main thread resource)
+                    if(br.ready()){
+
+                        String inputStr = br.readLine();
+
+                        String[] args = inputStr.split(" ");
+                        try {
+                            boolean success = this.doCommand(args);
+                            if (!success) {
+                                System.err.println("Command failed.");
+                            }
                         }
-                    }
-                    catch (MissingCommandException e){
+                        catch (MissingCommandException e){
                             System.err.println(inputStr + " is not a valid command. Try typing lc to list all valid commands.");
-                    }
-                    catch (ParameterException e){
-                        System.err.println("The following parameters are invalid for that command: " + e.getMessage());
-                    }
-                    catch (Exception e){
-                        e.printStackTrace();
+                        }
+                        catch (ParameterException e){
+                            System.err.println("The following parameters are invalid for that command: " + e.getMessage());
+                        }
+                        catch (Exception e){
+                            e.printStackTrace();
+                        }
+
                     }
                 }
+
+                br.close();
+
+            }catch (IOException ex){
+                System.out.println("Stopped reading console input.");
             }
-            scanner.close();
+
         });
+    }
+
+    public void shutdown(){
+        keepReadingInput.set(false);
+
+        if(readingInputTask != null){
+            readingInputTask.cancel(true);
+        }
+
+        executorService.shutdownNow();
     }
 
 }
