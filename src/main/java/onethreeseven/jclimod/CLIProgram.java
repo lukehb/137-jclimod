@@ -6,7 +6,6 @@ import com.beust.jcommander.ParameterException;
 
 import java.io.*;
 import java.util.List;
-import java.util.Scanner;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,8 +25,16 @@ public class CLIProgram {
     private final AtomicBoolean keepReadingInput = new AtomicBoolean(true);
     private Future readingInputTask;
 
-    public CLIProgram(Object... modelDataForCommands){
+    /**
+     * Calling this version of the constructor does not go looking for any commands to register.
+     * I.e the CLI has no commands until the user adds some.
+     */
+    protected CLIProgram(){
         jc.setAllowParameterOverwriting(true);
+    }
+
+    public CLIProgram(Object... modelDataForCommands){
+        this();
         findAndRegisterCommands(modelDataForCommands);
     }
 
@@ -54,7 +61,7 @@ public class CLIProgram {
                             System.out.println(sb.toString());
                         }
                         //run the command
-                        success = cmd.run();
+                        success = cmd.run(args);
                     }
                 }
             }
@@ -73,8 +80,8 @@ public class CLIProgram {
         return success;
     }
 
-    public void addCommand(CLICommand command){
-        String[] secondaryCommandNames = command.getCommandNameAliases();
+    public CLIProgram addCommand(CLICommand command){
+        String[] secondaryCommandNames = command.getOtherCommandsNames();
         String primaryCommandName = command.getCommandName();
         if(secondaryCommandNames == null || secondaryCommandNames.length <= 0){
             jc.addCommand(primaryCommandName, command);
@@ -83,6 +90,7 @@ public class CLIProgram {
             jc.addCommand(primaryCommandName, command, secondaryCommandNames);
             jc.getCommands().get(primaryCommandName).setAllowParameterOverwriting(true);
         }
+        return this;
     }
 
     /**

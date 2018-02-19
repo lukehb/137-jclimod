@@ -64,6 +64,16 @@ public class ListCommands extends CLICommand {
     }
 
     @Override
+    public boolean shouldStoreRerunAlias() {
+        return false;
+    }
+
+    @Override
+    public String generateRerunAliasBasedOnParams() {
+        return null;
+    }
+
+    @Override
     public String getCategory() {
         return "General";
     }
@@ -74,7 +84,7 @@ public class ListCommands extends CLICommand {
     }
 
     @Override
-    public String[] getCommandNameAliases() {
+    public String[] getOtherCommandsNames() {
         return new String[]{"lc"};
     }
 

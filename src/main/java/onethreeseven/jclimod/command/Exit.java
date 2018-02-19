@@ -1,5 +1,6 @@
 package onethreeseven.jclimod.command;
 
+import com.beust.jcommander.Parameter;
 import onethreeseven.jclimod.CLICommand;
 
 /**
@@ -7,6 +8,9 @@ import onethreeseven.jclimod.CLICommand;
  * @author Luke Bermingham
  */
 public class Exit extends CLICommand {
+
+    @Parameter(names = {"-t", "--delayTime"}, description = "How many seconds to wait before exiting.")
+    private int delayTimeSeconds = 0;
 
     @Override
     protected String getUsage() {
@@ -20,8 +24,58 @@ public class Exit extends CLICommand {
 
     @Override
     protected boolean runImpl() {
-        System.exit(0);
+        if(delayTimeSeconds > 0){
+            startDelayedExit();
+        }
+        else{
+            exit();
+        }
         return true;
+    }
+
+    private void startDelayedExit(){
+        Thread shutdownThread = new Thread(new Runnable() {
+            final long startTime = System.currentTimeMillis();
+            final long delayTimeSecs = delayTimeSeconds;
+            @Override
+            public void run() {
+                System.out.println("Program will exit in " + delayTimeSecs + " seconds...");
+                long elapsedMillis = System.currentTimeMillis() - startTime;
+                long elapsedSeconds = elapsedMillis / 1000L;
+                while(elapsedSeconds < delayTimeSecs){
+                    try {
+                        Thread.sleep(1000L);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    elapsedMillis = System.currentTimeMillis() - startTime;
+                    elapsedSeconds = elapsedMillis / 1000L;
+                }
+                exit();
+            }
+        });
+        shutdownThread.setName("CLI exit countdown thread");
+        shutdownThread.start();
+    }
+
+    protected void exit(){
+        System.exit(0);
+    }
+
+    @Override
+    protected void resetParametersAfterRun(Class clazz) {
+        super.resetParametersAfterRun(clazz);
+        delayTimeSeconds = 0;
+    }
+
+    @Override
+    public boolean shouldStoreRerunAlias() {
+        return delayTimeSeconds > 0;
+    }
+
+    @Override
+    public String generateRerunAliasBasedOnParams() {
+        return delayTimeSeconds + "s";
     }
 
     @Override
@@ -35,7 +89,7 @@ public class Exit extends CLICommand {
     }
 
     @Override
-    public String[] getCommandNameAliases() {
+    public String[] getOtherCommandsNames() {
         return new String[]{"ex"};
     }
 
