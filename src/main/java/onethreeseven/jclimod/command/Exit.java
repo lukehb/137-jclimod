@@ -89,7 +89,7 @@ public class Exit extends CLICommand {
     }
 
     @Override
-    public String[] getOtherCommandsNames() {
+    public String[] getOtherCommandNames() {
         return new String[]{"ex"};
     }
 

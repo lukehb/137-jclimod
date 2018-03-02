@@ -84,7 +84,7 @@ public class ListCommands extends CLICommand {
     }
 
     @Override
-    public String[] getOtherCommandsNames() {
+    public String[] getOtherCommandNames() {
         return new String[]{"lc"};
     }
 

@@ -29,11 +29,11 @@ public class CLIProgram {
      * Calling this version of the constructor does not go looking for any commands to register.
      * I.e the CLI has no commands until the user adds some.
      */
-    protected CLIProgram(){
+    public CLIProgram(){
         jc.setAllowParameterOverwriting(true);
     }
 
-    public CLIProgram(Object... modelDataForCommands){
+    public CLIProgram(Object[] modelDataForCommands){
         this();
         findAndRegisterCommands(modelDataForCommands);
     }
@@ -81,7 +81,7 @@ public class CLIProgram {
     }
 
     public CLIProgram addCommand(CLICommand command){
-        String[] secondaryCommandNames = command.getOtherCommandsNames();
+        String[] secondaryCommandNames = command.getOtherCommandNames();
         String primaryCommandName = command.getCommandName();
         if(secondaryCommandNames == null || secondaryCommandNames.length <= 0){
             jc.addCommand(primaryCommandName, command);

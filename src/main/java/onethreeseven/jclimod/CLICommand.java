@@ -2,6 +2,10 @@ package onethreeseven.jclimod;
 
 import com.beust.jcommander.Parameter;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
@@ -24,6 +28,10 @@ public abstract class CLICommand {
     protected abstract String getUsage();
     protected abstract boolean parametersValid();
     protected abstract boolean runImpl();
+
+    protected int getMaxStoredAliases(){
+        return 5;
+    }
 
     protected void resetParametersAfterRun(Class clazz){
         for(Field field  : clazz.getDeclaredFields())
@@ -53,7 +61,7 @@ public abstract class CLICommand {
     }
 
     protected Preferences getAliasStore(){
-        return Preferences.userNodeForPackage(this.getClass());
+        return Preferences.userNodeForPackage(this.getClass()).node(getCommandName());
     }
 
     private void storeCommandAlias(String[] args){
@@ -65,8 +73,28 @@ public abstract class CLICommand {
         }
         String alias = generateRerunAliasBasedOnParams();
         Preferences prefs = getAliasStore();
-        prefs.put(alias, sb.toString());
+
+
+
+
         try {
+
+            //make sure we don't have more than max value keys
+            String[] otherAliases = prefs.keys();
+            if(otherAliases.length > getMaxStoredAliases()){
+                List<String> keys = Arrays.asList(otherAliases);
+                Collections.shuffle(keys);
+                //+1 is for the new key we are about to add
+                int nToRemove = (otherAliases.length - getMaxStoredAliases()) + 1 ;
+                nToRemove = Math.min(otherAliases.length, nToRemove);
+                for (int i = 0; i < nToRemove; i++) {
+                    prefs.remove(keys.get(i));
+                }
+            }
+
+            //actually store
+            prefs.put(alias, sb.toString());
+            //write
             prefs.flush();
             System.out.println("Tip: this command is now aliased, you can run it again by typing " + getCommandName() + " -rr " + alias);
         } catch (BackingStoreException e) {
@@ -76,7 +104,7 @@ public abstract class CLICommand {
 
     private static final String commandNotAvailable = "none";
 
-    private boolean runPreviousCommandUsingAlias(String alias){
+    protected boolean runPreviousCommandUsingAlias(String alias){
         resetParametersAfterRun(this.getClass());
         String prevCommandStr = getAliasStore().get(alias, commandNotAvailable);
         if(prevCommandStr.equals(commandNotAvailable)){
@@ -139,6 +167,10 @@ public abstract class CLICommand {
 
     }
 
+    public void removeRerunAlias(String alias){
+        getAliasStore().remove(alias);
+    }
+
     public String[] getRerunAliases(){
         try {
             return getAliasStore().keys();
@@ -172,14 +204,14 @@ public abstract class CLICommand {
 
     public abstract String getCommandName();
 
-    public abstract String[] getOtherCommandsNames();
+    public abstract String[] getOtherCommandNames();
 
     public abstract String getDescription();
 
     @Override
     public String toString() {
         StringBuilder name = new StringBuilder(getCommandName());
-        String[] secondaryCommandNames = getOtherCommandsNames();
+        String[] secondaryCommandNames = getOtherCommandNames();
         if(secondaryCommandNames != null && secondaryCommandNames.length >= 1){
             for (String secondaryCommandName : secondaryCommandNames) {
                 name.append("(").append(secondaryCommandName).append(")");
