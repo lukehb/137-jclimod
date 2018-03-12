@@ -55,6 +55,9 @@ public class ListCommands extends CLICommand {
     protected boolean runImpl() {
         //output the commands list
         for (Map.Entry<String, ArrayList<CLICommand>> entry : getMapOfCommands().entrySet()) {
+            if(!isRunning.get()){
+                return false;
+            }
             System.out.println(String.format(commandHeader, entry.getKey()));
             for (CLICommand tsCommand : entry.getValue()) {
                 System.out.println("    " + tsCommand.toString());

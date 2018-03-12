@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
@@ -25,12 +26,18 @@ public abstract class CLICommand {
     @Parameter(names = {"-h", "--help"}, help = true, description = "Append -h to any command to display usage tips.")
     private boolean runHelpCommand;
 
+    protected final AtomicBoolean isRunning = new AtomicBoolean(false);
+
     protected abstract String getUsage();
     protected abstract boolean parametersValid();
     protected abstract boolean runImpl();
 
     protected int getMaxStoredAliases(){
         return 5;
+    }
+
+    public void stop(){
+        isRunning.set(false);
     }
 
     protected void resetParametersAfterRun(Class clazz){
@@ -133,21 +140,25 @@ public abstract class CLICommand {
     }
 
     public boolean run(String[] args){
+        isRunning.set(true);
         if(runHelpCommand){
             System.out.println("Example usage: " + getUsage());
             runHelpCommand = false;
             resetParametersAfterRun(this.getClass());
+            isRunning.set(false);
             return true;
         }
         else{
             if(listCommandAliases){
                 listAliases();
                 resetParametersAfterRun(this.getClass());
+                isRunning.set(false);
                 return true;
             }
             else if(rerunCommandAlias != null){
                 boolean success = runPreviousCommandUsingAlias(rerunCommandAlias);
                 resetParametersAfterRun(this.getClass());
+                isRunning.set(false);
                 return success;
             }
             else if(parametersValid()){
@@ -157,10 +168,12 @@ public abstract class CLICommand {
                     storeCommandAlias(args);
                 }
                 resetParametersAfterRun(this.getClass());
+                isRunning.set(false);
                 return success;
             }else{
                 System.err.println("Parameters invalid.");
                 resetParametersAfterRun(this.getClass());
+                isRunning.set(false);
                 return false;
             }
         }
