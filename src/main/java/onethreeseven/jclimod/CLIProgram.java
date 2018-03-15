@@ -130,6 +130,8 @@ public class CLIProgram {
                             boolean success = this.doCommand(args);
                             if (!success) {
                                 System.err.println("Command failed.");
+                            }else{
+                                System.out.println(inputStr + " completed.");
                             }
                         }
                         catch (MissingCommandException e){
