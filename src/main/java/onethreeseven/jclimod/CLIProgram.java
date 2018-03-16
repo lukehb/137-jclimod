@@ -113,44 +113,38 @@ public class CLIProgram {
 
         readingInputTask = executorService.submit(()->{
 
-            final BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            Console console = System.console();
+            if(console == null){
+                System.err.println("No interactive console found, try re-launching in console that supports interactive mode.");
+                return;
+            }
 
-            try{
+            while(keepReadingInput.get()){
 
-                while(keepReadingInput.get()){
-                    //ready() is very important here, because buffer is only ready if it has input in it
-                    //otherwise if ready() were removed we go to readline() which just blocks for input
-                    //which will cause this thread to block while holding System.in (a main thread resource)
-                    if(br.ready()){
+                String inputStr = console.readLine();
 
-                        String inputStr = br.readLine();
-
-                        String[] args = inputStr.split(" ");
-                        try {
-                            boolean success = this.doCommand(args);
-                            if (!success) {
-                                System.err.println("Command failed.");
-                            }else{
-                                System.out.println(inputStr + " completed.");
-                            }
-                        }
-                        catch (MissingCommandException e){
-                            System.err.println(inputStr + " is not a valid command. Try typing lc to list all valid commands.");
-                        }
-                        catch (ParameterException e){
-                            System.err.println("The following parameters are invalid for that command: " + e.getMessage());
-                        }
-                        catch (Exception e){
-                            e.printStackTrace();
-                        }
-
-                    }
+                if(inputStr.isEmpty()){
+                    continue;
                 }
 
-                br.close();
-
-            }catch (IOException ex){
-                System.out.println("Stopped reading console input.");
+                String[] args = inputStr.split(" ");
+                try {
+                    boolean success = this.doCommand(args);
+                    if (!success) {
+                        System.err.println("Command failed.");
+                    }else{
+                        System.out.println(inputStr + " completed.");
+                    }
+                }
+                catch (MissingCommandException e){
+                    System.err.println(inputStr + " is not a valid command. Try typing lc to list all valid commands.");
+                }
+                catch (ParameterException e){
+                    System.err.println("The following parameters are invalid for that command: " + e.getMessage());
+                }
+                catch (Exception e){
+                    e.printStackTrace();
+                }
             }
 
         });
